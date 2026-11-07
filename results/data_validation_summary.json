@@ -1,0 +1,63 @@
+{
+  "shape": {
+    "rows": 12330,
+    "columns": 18
+  },
+  "input_feature_count": 17,
+  "target_column": "Revenue",
+  "numeric_features": [
+    "Administrative",
+    "Administrative_Duration",
+    "Informational",
+    "Informational_Duration",
+    "ProductRelated",
+    "ProductRelated_Duration",
+    "BounceRates",
+    "ExitRates",
+    "PageValues",
+    "SpecialDay"
+  ],
+  "categorical_features": [
+    "Month",
+    "OperatingSystems",
+    "Browser",
+    "Region",
+    "TrafficType",
+    "VisitorType",
+    "Weekend"
+  ],
+  "missing_required_columns": [],
+  "missing_values_by_column": {
+    "Administrative": 0,
+    "Administrative_Duration": 0,
+    "Informational": 0,
+    "Informational_Duration": 0,
+    "ProductRelated": 0,
+    "ProductRelated_Duration": 0,
+    "BounceRates": 0,
+    "ExitRates": 0,
+    "PageValues": 0,
+    "SpecialDay": 0,
+    "Month": 0,
+    "OperatingSystems": 0,
+    "Browser": 0,
+    "Region": 0,
+    "TrafficType": 0,
+    "VisitorType": 0,
+    "Weekend": 0,
+    "Revenue": 0
+  },
+  "duplicate_records": 125,
+  "target_class_distribution": {
+    "FALSE": 10422,
+    "TRUE": 1908
+  },
+  "constant_or_unusable_features": [],
+  "identifier_columns_removed": [],
+  "leakage_review": {
+    "identifier_columns": "No unique session/user identifier is present in the released CSV.",
+    "page_values_note": "PageValues is retained because it is a documented Google Analytics session feature, but it is expected to be strongly predictive and is discussed in the observations."
+  },
+  "meets_minimum_instances_500": true,
+  "meets_minimum_features_12": true
+}

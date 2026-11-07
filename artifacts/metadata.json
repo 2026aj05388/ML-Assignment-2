@@ -1,0 +1,182 @@
+{
+  "dataset_name": "Online Shoppers Purchasing Intention Dataset",
+  "dataset_source_url": "https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset",
+  "target_column": "Revenue",
+  "input_feature_names": [
+    "Administrative",
+    "Administrative_Duration",
+    "Informational",
+    "Informational_Duration",
+    "ProductRelated",
+    "ProductRelated_Duration",
+    "BounceRates",
+    "ExitRates",
+    "PageValues",
+    "SpecialDay",
+    "Month",
+    "OperatingSystems",
+    "Browser",
+    "Region",
+    "TrafficType",
+    "VisitorType",
+    "Weekend"
+  ],
+  "numeric_features": [
+    "Administrative",
+    "Administrative_Duration",
+    "Informational",
+    "Informational_Duration",
+    "ProductRelated",
+    "ProductRelated_Duration",
+    "BounceRates",
+    "ExitRates",
+    "PageValues",
+    "SpecialDay"
+  ],
+  "categorical_features": [
+    "Month",
+    "OperatingSystems",
+    "Browser",
+    "Region",
+    "TrafficType",
+    "VisitorType",
+    "Weekend"
+  ],
+  "categorical_values_observed_in_training_dataset": {
+    "Month": [
+      "Aug",
+      "Dec",
+      "Feb",
+      "Jul",
+      "June",
+      "Mar",
+      "May",
+      "Nov",
+      "Oct",
+      "Sep"
+    ],
+    "OperatingSystems": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "Browser": [
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "Region": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "TrafficType": [
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "2",
+      "20",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "VisitorType": [
+      "New_Visitor",
+      "Other",
+      "Returning_Visitor"
+    ],
+    "Weekend": [
+      "False",
+      "True"
+    ]
+  },
+  "target_classes": [
+    "FALSE",
+    "TRUE"
+  ],
+  "positive_class": "TRUE",
+  "split": {
+    "test_size": 0.2,
+    "random_seed": 42,
+    "stratified": true,
+    "train_rows": 9864,
+    "test_rows": 2466,
+    "train_class_distribution": {
+      "FALSE": 8338,
+      "TRUE": 1526
+    },
+    "test_class_distribution": {
+      "FALSE": 2084,
+      "TRUE": 382
+    }
+  },
+  "metric_conventions": {
+    "binary_positive_class": "TRUE",
+    "auc": "roc_auc_score using predict_proba for TRUE class",
+    "precision_recall_f1": "binary metrics using TRUE as positive class",
+    "mcc": "sklearn.metrics.matthews_corrcoef"
+  },
+  "model_files": {
+    "logistic_regression": "logistic_regression.joblib",
+    "decision_tree": "decision_tree.joblib",
+    "knn": "knn.joblib",
+    "naive_bayes": "naive_bayes.joblib",
+    "svm": "svm.joblib"
+  },
+  "training_configuration": {
+    "logistic_regression": "LogisticRegression(max_iter=1000, solver='lbfgs') with scaled numeric features",
+    "decision_tree": "DecisionTreeClassifier(max_depth=8, min_samples_leaf=20) with unscaled numeric features",
+    "knn": "KNeighborsClassifier(n_neighbors=11, weights='distance') with scaled numeric features",
+    "naive_bayes": "GaussianNB with dense one-hot categorical features and imputed numeric features",
+    "svm": "SVC(kernel='rbf', C=1.0, gamma='scale', probability=True, class_weight='balanced') with scaled numeric features"
+  },
+  "preprocessing_decisions": {
+    "split_before_preprocessing_fit": true,
+    "numeric_imputation": "median fitted on training data inside each pipeline",
+    "categorical_imputation": "most_frequent fitted on training data inside each pipeline",
+    "categorical_encoding": "OneHotEncoder(handle_unknown='ignore') fitted on training data",
+    "scaling": "StandardScaler only for Logistic Regression, KNN, and SVM numeric features",
+    "identifier_columns_removed": [],
+    "leakage_review": "No identifier column present. PageValues retained as documented analytics feature and discussed as strong predictor."
+  },
+  "saved_model_prediction_verification": {
+    "Logistic Regression": true,
+    "Decision Tree": true,
+    "K-Nearest Neighbors": true,
+    "Naive Bayes": true,
+    "Support Vector Machine": true
+  }
+}

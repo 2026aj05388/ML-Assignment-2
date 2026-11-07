@@ -1,0 +1,82 @@
+## A. Problem Statement
+
+This project addresses a binary classification problem using the Online Shoppers Purchasing Intention dataset. The prediction objective is to determine whether an online shopping session will result in a purchase.
+
+The target variable is `Revenue`, where `TRUE` represents a session that generated revenue and `FALSE` represents a session that did not generate revenue. Predicting online purchase intention is useful because it helps e-commerce platforms understand conversion behavior, identify high-value sessions, and compare how different machine learning algorithms handle imbalanced customer behavior data.
+
+Five supervised classification models are compared on the same dataset: Logistic Regression, Decision Tree, K-Nearest Neighbors, Naive Bayes, and Support Vector Machine.
+
+## B. Dataset Description
+
+- **Dataset name:** Online Shoppers Purchasing Intention Dataset
+- **Dataset source:** UCI Machine Learning Repository
+- **Official URL:** https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset
+- **Number of records:** 12,330
+- **Number of input features:** 17
+- **Target variable:** `Revenue`
+- **Target classes:** `FALSE`, `TRUE`
+- **Positive class used for binary Precision, Recall, F1, and AUC:** `TRUE`
+
+The dataset contains behavioral, analytics, technical, and contextual features from online shopping sessions.
+
+- **Numerical features:** `Administrative`, `Administrative_Duration`, `Informational`, `Informational_Duration`, `ProductRelated`, `ProductRelated_Duration`, `BounceRates`, `ExitRates`, `PageValues`, `SpecialDay`
+- **Categorical features:** `Month`, `OperatingSystems`, `Browser`, `Region`, `TrafficType`, `VisitorType`, `Weekend`
+
+Actual dataset observations from the generated validation output:
+
+- Missing values: `0`
+- Duplicate rows in the raw dataset: `125`
+- Constant or unusable features detected: none
+- Identifier columns removed: none
+
+Preprocessing is implemented with scikit-learn `Pipeline` and `ColumnTransformer`. The dataset is split before fitting preprocessing transformations, so imputers, encoders, and scalers are fitted only on the training data. Numerical features are imputed using the median. Categorical features are imputed using the most frequent value and encoded using `OneHotEncoder(handle_unknown='ignore')`. `StandardScaler` is applied for Logistic Regression, KNN, and SVM, while Decision Tree and Gaussian Naive Bayes use unscaled numerical features.
+
+The project uses an 80:20 stratified train-test split with `random_state=42`.
+
+| Dataset Partition | Records | FALSE | TRUE |
+|---|---:|---:|---:|
+| Full dataset | 12,330 | 10,422 | 1,908 |
+| Training set | 9,864 | 8,338 | 1,526 |
+| Testing set | 2,466 | 2,084 | 382 |
+
+The target distribution shows class imbalance because non-purchase sessions are much more frequent than purchase sessions.
+
+## C. GitHub Repository Link
+
+`ADD_YOUR_GITHUB_REPOSITORY_URL`
+
+The repository contains the complete source code, saved model pipelines, preprocessing and metadata artifacts, evaluation outputs, README file, requirements file, and the held-out `test_data.csv` used for testing the deployed application.
+
+## D. Models Used
+
+All five models were trained on the same training split and evaluated on the same untouched held-out test split. The binary metrics use `TRUE` as the positive class.
+
+- **Logistic Regression:** Implemented using `LogisticRegression(max_iter=1000, solver='lbfgs', random_state=42)`. Numerical features are scaled because logistic regression is sensitive to feature magnitude. The model uses scikit-learn's default L2 regularization.
+- **Decision Tree:** Implemented using `DecisionTreeClassifier(max_depth=8, min_samples_leaf=20, random_state=42)`. The default Gini impurity criterion is used. The depth and leaf-size restrictions reduce overfitting compared with an unrestricted tree.
+- **K-Nearest Neighbors (KNN):** Implemented using `KNeighborsClassifier(n_neighbors=11, weights='distance')`. Scaled numerical features are used because distance-based classification is affected by feature scale.
+- **Naive Bayes:** Implemented using `GaussianNB()`. The model receives imputed numerical features and dense one-hot encoded categorical features through the saved preprocessing pipeline.
+- **Support Vector Machine (SVM):** Implemented using `SVC(kernel='rbf', C=1.0, gamma='scale', probability=True, class_weight='balanced', random_state=42)`. Numerical features are scaled, and `probability=True` is used so that AUC can be calculated from class probabilities.
+
+The following metrics were retrieved from `results/metrics.csv`.
+
+| ML Model Name | Accuracy | AUC | Precision | Recall | F1 | MCC |
+|---|---:|---:|---:|---:|---:|---:|
+| Logistic Regression | 0.8808 | 0.8828 | 0.7366 | 0.3586 | 0.4824 | 0.4592 |
+| Decision Tree | 0.8958 | 0.9037 | 0.7036 | 0.5654 | 0.6270 | 0.5718 |
+| K-Nearest Neighbors (KNN) | 0.8731 | 0.8177 | 0.6927 | 0.3246 | 0.4421 | 0.4159 |
+| Naive Bayes | 0.7340 | 0.7725 | 0.3257 | 0.6702 | 0.4384 | 0.3229 |
+| Support Vector Machine (SVM) | 0.8654 | 0.8979 | 0.5477 | 0.7513 | 0.6336 | 0.5639 |
+
+## E. Observations on Model Performance
+
+| ML Model Name | Observation about model performance |
+|---|---|
+| Logistic Regression | Logistic Regression gives the highest precision among the five models, so its positive purchase predictions are comparatively reliable. However, its low recall shows that it misses many actual purchase sessions, which is important because the positive class is the minority class. |
+| Decision Tree | Decision Tree gives the highest Accuracy, AUC, and MCC. Its strong MCC indicates better balanced binary classification performance than models that only perform well on one class. Its recall is lower than SVM, but it provides the strongest overall metric balance. |
+| K-Nearest Neighbors (KNN) | KNN has reasonable accuracy but the weakest recall among the five models. This means it identifies many non-purchase sessions correctly but struggles to detect purchase sessions, even after scaling distance-sensitive numerical features. |
+| Naive Bayes | Naive Bayes has relatively high recall but low precision and the lowest MCC. It detects many actual purchase sessions but also produces many false positives, which is consistent with its simplifying conditional independence assumption on this mixed-feature dataset. |
+| Support Vector Machine (SVM) | SVM achieves the highest recall and F1-score, making it the best model when the goal is to capture as many purchase sessions as possible. Its precision is lower than Logistic Regression and Decision Tree, so it accepts more false positives to improve recall. |
+
+**Overall, Winner for your dataset?**
+
+Decision Tree is the overall winner for this dataset. It has the highest Accuracy, AUC, and MCC, and its F1-score is close to the best F1-score achieved by SVM. Because the dataset is imbalanced, Accuracy alone is not sufficient; MCC and AUC are important indicators of balanced performance. SVM is preferable if recall is the main objective, but Decision Tree provides the best overall balance across the required metrics.
