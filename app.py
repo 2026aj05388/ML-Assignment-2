@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import joblib
@@ -12,7 +11,6 @@ import streamlit as st
 from sklearn.metrics import classification_report, confusion_matrix
 
 from src.config import (
-    EVALUATION_RESULTS_FILE,
     FEATURE_COLUMNS,
     METADATA_FILE,
     METRICS_FILE,
@@ -29,6 +27,86 @@ from src.evaluate_models import evaluate_model, evaluate_models
 st.set_page_config(
     page_title="Online Shopper Purchase Classifier",
     layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"] {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform-origin: left center;
+    }
+
+    [data-testid="collapsedControl"] {
+        margin: 0.75rem !important;
+        min-width: 58px !important;
+        min-height: 58px !important;
+        width: 58px !important;
+        height: 58px !important;
+        background: #f2f5fa !important;
+        border: 1.5px solid #a9b4c2 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+    }
+
+    [data-testid="collapsedControl"] button,
+    [data-testid="stSidebarCollapseButton"] button,
+    button[title="Open sidebar"],
+    button[aria-label="Open sidebar"],
+    button[title="Close sidebar"],
+    button[aria-label="Close sidebar"] {
+        min-width: 56px !important;
+        min-height: 56px !important;
+        background: #f2f5fa !important;
+        border: 1.5px solid #a9b4c2 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    [data-testid="collapsedControl"] button:hover,
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    button[title="Open sidebar"]:hover,
+    button[aria-label="Open sidebar"]:hover,
+    button[title="Close sidebar"]:hover,
+    button[aria-label="Close sidebar"]:hover {
+        background: #e7edf6 !important;
+        border-color: #7f8da1 !important;
+        box-shadow: 0 5px 16px rgba(0, 0, 0, 0.30) !important;
+    }
+
+    [data-testid="collapsedControl"] > * {
+        transform: scale(1.45) !important;
+    }
+
+    [data-testid="collapsedControl"] svg,
+    [data-testid="stSidebarCollapseButton"] svg,
+    button[title="Open sidebar"] svg,
+    button[aria-label="Open sidebar"] svg,
+    button[title="Close sidebar"] svg,
+    button[aria-label="Close sidebar"] svg {
+        width: 1.9rem !important;
+        height: 1.9rem !important;
+        color: #5f6f83 !important;
+        fill: #5f6f83 !important;
+        stroke: #5f6f83 !important;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -125,23 +203,8 @@ def render_metrics(row: pd.Series) -> None:
         column.metric(metric_name, f"{row[metric_name]:.4f}")
 
 
-def render_algorithm_notes() -> None:
-    st.markdown(
-        """
-        **Algorithm guide**
-
-        - **Logistic Regression:** estimates purchase probability using a regularized linear decision boundary.
-        - **Decision Tree:** splits visitor sessions into rule-based groups using impurity reduction.
-        - **K-Nearest Neighbors:** predicts from nearby sessions, so scaled numeric features are important.
-        - **Naive Bayes:** applies Bayes' theorem with a simplifying independence assumption.
-        - **Support Vector Machine:** finds a maximum-margin boundary; this project uses an RBF kernel and probabilities for AUC.
-        """
-    )
-
-
 def main() -> None:
     st.title("Online Shopper Purchase Intention Classifier")
-    st.caption("BITS Pilani M.Tech AIML Assignment 2 | Saved-model evaluation, no retraining in the app")
 
     if not METADATA_FILE.exists():
         st.error("Project metadata is missing. Run `py -m src.train_models` from the project root first.")
@@ -151,25 +214,28 @@ def main() -> None:
     models = load_models()
 
     with st.sidebar:
+        st.caption("Close sidebar")
         st.header("Evaluation Controls")
         selected_model = st.selectbox(
             "Choose a classifier",
             list(MODEL_DISPLAY_NAMES.values()),
         )
-        uploaded_file = st.file_uploader("Upload labeled test CSV", type=["csv"])
+        uploaded_file = st.file_uploader("Upload labeled test CSV", type=["csv"], key="sidebar_upload")
         st.divider()
         st.write("Expected target column:", f"`{TARGET_COLUMN}`")
         st.write("Expected feature count:", len(FEATURE_COLUMNS))
 
-    tab_evaluate, tab_compare, tab_about = st.tabs(["Evaluate Upload", "Compare All Models", "Dataset & Algorithms"])
-
     if uploaded_file is None:
-        st.info("Upload `test_data.csv` to evaluate the saved classifiers.")
+        st.info(
+            "Use the sidebar to select a classifier and upload `test_data.csv`."
+        )
         reference_metrics = load_reference_metrics()
         if not reference_metrics.empty:
             st.subheader("Reference Metrics from Held-Out Test Data")
             st.dataframe(reference_metrics, use_container_width=True, hide_index=True)
         return
+
+    tab_evaluate, tab_compare = st.tabs(["Evaluate Upload", "Compare All Models"])
 
     try:
         uploaded_data = pd.read_csv(uploaded_file)
@@ -191,11 +257,10 @@ def main() -> None:
 
     with tab_evaluate:
         st.subheader("Uploaded Dataset")
-        dim_col, class_col = st.columns([1, 2])
+        dim_col, class_col = st.columns([0.7, 2.3])
         dim_col.metric("Rows", validated_data.shape[0])
         dim_col.metric("Columns", validated_data.shape[1])
-        class_col.bar_chart(y_uploaded.value_counts())
-        st.dataframe(validated_data.head(20), use_container_width=True)
+        class_col.bar_chart(y_uploaded.value_counts(), height=220)
 
         st.subheader(f"Selected Model: {selected_model}")
         model = models[selected_model]
@@ -225,17 +290,6 @@ def main() -> None:
 
         chart_data = comparison_metrics.set_index("ML Model Name")[["Accuracy", "AUC", "Precision", "Recall", "F1", "MCC"]]
         st.bar_chart(chart_data)
-        st.caption("All scores are calculated from the uploaded labeled test CSV using saved pipelines only.")
-
-    with tab_about:
-        st.subheader("Dataset Context")
-        st.write(
-            "The dataset contains online shopping sessions from UCI. The target label `Revenue` indicates "
-            "whether a session ended with a purchase."
-        )
-        st.write("Source:", metadata["dataset_source_url"])
-        st.write("Training/test split:", metadata["split"])
-        render_algorithm_notes()
 
 
 if __name__ == "__main__":
