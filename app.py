@@ -120,26 +120,6 @@ st.markdown(
         margin-bottom: 0.4rem;
     }
 
-    .app-description {
-        font-size: 1.02rem;
-        color: #4f5b66;
-        margin-bottom: 1.2rem;
-    }
-
-    .landing-card {
-        background: #f8fbff;
-        border: 1px solid #d8e6f7;
-        border-radius: 14px;
-        padding: 1rem 1.15rem;
-        box-shadow: 0 2px 10px rgba(29, 78, 137, 0.08);
-        min-height: 190px;
-    }
-
-    .landing-card h3 {
-        margin-top: 0;
-        color: #1f3b57;
-    }
-
     .landing-callout {
         background: #eef6ff;
         border-left: 5px solid #2c7be5;
@@ -317,43 +297,11 @@ def render_landing_screen() -> None:
     st.markdown("### How to Use This Application")
     st.markdown(
         """
-        1. Upload the original `test_data.csv` file using the sidebar.
-        2. Navigate to **Evaluate Upload** to select an individual classifier and examine its performance.
+        1. Upload the original `test_data.csv` file using the sidebar and select an individual classifier.
+        2. Navigate to **Evaluate Upload** and examine its performance.
         3. Navigate to **Compare All Models** to compare all five classifiers side by side.
         """
     )
-
-    evaluate_col, compare_col = st.columns(2)
-    with evaluate_col:
-        st.markdown(
-            """
-            <div class="landing-card">
-                <h3>Evaluate Upload</h3>
-                <ul>
-                    <li>Select an individual classifier.</li>
-                    <li>View Accuracy, AUC, Precision, Recall, F1 and MCC.</li>
-                    <li>Examine the confusion matrix.</li>
-                    <li>View the classification report.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with compare_col:
-        st.markdown(
-            """
-            <div class="landing-card">
-                <h3>Compare All Models</h3>
-                <ul>
-                    <li>Compare all five classifiers using the same uploaded test dataset.</li>
-                    <li>View the evaluation metrics in a comparison table.</li>
-                    <li>Explore metric comparison charts.</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     st.markdown(
         """
@@ -369,11 +317,6 @@ def main() -> None:
     st.title("Online Shopper Purchase Intention Classifier")
     st.markdown(
         '<div class="app-subtitle">Machine Learning Model Evaluation & Comparison Dashboard</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="app-description">Evaluate and compare five machine learning classification algorithms '
-        'to predict whether an online shopping session will result in a purchase.</div>',
         unsafe_allow_html=True,
     )
 
@@ -397,8 +340,6 @@ def main() -> None:
         st.markdown(
             """
             - Only `test_data.csv` is accepted.
-            - The CSV must contain all required input features and the `Revenue` target column.
-            - All five models are already trained. Uploading test data will not retrain them.
             """
         )
         st.divider()
