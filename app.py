@@ -18,10 +18,18 @@ from src.config import (
     MODEL_FILENAMES,
     MODELS_DIR,
     NUMERIC_FEATURES,
+    ROOT_TEST_DATA_FILE,
     TARGET_COLUMN,
 )
 from src.data_validation import standardize_dataset
 from src.evaluate_models import evaluate_model, evaluate_models
+
+
+EXPECTED_UPLOAD_FILENAME = "test_data.csv"
+INVALID_FILENAME_ERROR = (
+    "Invalid file uploaded! Please upload the original test_data.csv file provided with this project. "
+    "Other files are not accepted."
+)
 
 
 st.set_page_config(
@@ -104,6 +112,44 @@ st.markdown(
         stroke: #5f6f83 !important;
     }
 
+    .app-subtitle {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #44546a;
+        margin-top: -0.35rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .app-description {
+        font-size: 1.02rem;
+        color: #4f5b66;
+        margin-bottom: 1.2rem;
+    }
+
+    .landing-card {
+        background: #f8fbff;
+        border: 1px solid #d8e6f7;
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        box-shadow: 0 2px 10px rgba(29, 78, 137, 0.08);
+        min-height: 190px;
+    }
+
+    .landing-card h3 {
+        margin-top: 0;
+        color: #1f3b57;
+    }
+
+    .landing-callout {
+        background: #eef6ff;
+        border-left: 5px solid #2c7be5;
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        font-weight: 600;
+        color: #17324d;
+        margin-top: 1.2rem;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -122,6 +168,11 @@ def load_reference_metrics() -> pd.DataFrame:
     return pd.DataFrame()
 
 
+@st.cache_data
+def load_expected_test_data() -> pd.DataFrame:
+    return standardize_dataset(pd.read_csv(ROOT_TEST_DATA_FILE))
+
+
 @st.cache_resource
 def load_models() -> dict[str, Any]:
     models = {}
@@ -134,7 +185,47 @@ def load_models() -> dict[str, Any]:
     return models
 
 
-def validate_uploaded_data(data: pd.DataFrame, metadata: dict[str, Any]) -> tuple[pd.DataFrame | None, list[str], list[str]]:
+def validate_uploaded_filename(filename: str) -> str | None:
+    if filename != EXPECTED_UPLOAD_FILENAME:
+        return INVALID_FILENAME_ERROR
+    return None
+
+
+def normalize_for_test_data_comparison(data: pd.DataFrame) -> pd.DataFrame:
+    data = standardize_dataset(data.copy())
+    required_columns = FEATURE_COLUMNS + [TARGET_COLUMN]
+    data = data[required_columns].copy()
+
+    for column in NUMERIC_FEATURES:
+        data[column] = pd.to_numeric(data[column], errors="coerce")
+
+    categorical_and_target_columns = [
+        column for column in required_columns if column not in NUMERIC_FEATURES
+    ]
+    for column in categorical_and_target_columns:
+        data[column] = data[column].astype(str)
+
+    return data.reset_index(drop=True)
+
+
+def uploaded_matches_expected_test_data(uploaded_data: pd.DataFrame, expected_data: pd.DataFrame) -> bool:
+    try:
+        normalized_uploaded = normalize_for_test_data_comparison(uploaded_data)
+        normalized_expected = normalize_for_test_data_comparison(expected_data)
+    except (KeyError, ValueError):
+        return False
+
+    if normalized_uploaded.shape != normalized_expected.shape:
+        return False
+
+    return normalized_uploaded.equals(normalized_expected)
+
+
+def validate_uploaded_data(
+    data: pd.DataFrame,
+    metadata: dict[str, Any],
+    expected_test_data: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame | None, list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -142,6 +233,7 @@ def validate_uploaded_data(data: pd.DataFrame, metadata: dict[str, Any]) -> tupl
         errors.append("The uploaded CSV is empty.")
         return None, errors, warnings
 
+    target_before_standardization = data[TARGET_COLUMN].copy() if TARGET_COLUMN in data.columns else None
     data = standardize_dataset(data)
     required_columns = FEATURE_COLUMNS + [TARGET_COLUMN]
     missing_columns = [column for column in required_columns if column not in data.columns]
@@ -152,8 +244,19 @@ def validate_uploaded_data(data: pd.DataFrame, metadata: dict[str, Any]) -> tupl
     if unexpected_columns:
         warnings.append(f"Unexpected columns will be ignored: {', '.join(unexpected_columns)}")
 
-    if TARGET_COLUMN in data.columns and data[TARGET_COLUMN].isna().any():
-        errors.append("The target column contains missing values.")
+    if TARGET_COLUMN in data.columns:
+        invalid_target_values = []
+        if target_before_standardization is not None:
+            invalid_mask = data[TARGET_COLUMN].isna() & target_before_standardization.notna()
+            invalid_target_values = sorted(target_before_standardization[invalid_mask].astype(str).unique().tolist())
+        if invalid_target_values:
+            errors.append(f"Unexpected target label(s): {', '.join(invalid_target_values)}")
+
+        missing_target_mask = data[TARGET_COLUMN].isna()
+        if target_before_standardization is not None:
+            missing_target_mask = missing_target_mask & target_before_standardization.isna()
+        if missing_target_mask.any():
+            errors.append("The target column contains missing values.")
 
     for column in NUMERIC_FEATURES:
         if column in data.columns:
@@ -184,6 +287,13 @@ def validate_uploaded_data(data: pd.DataFrame, metadata: dict[str, Any]) -> tupl
     if errors:
         return None, errors, warnings
 
+    if expected_test_data is not None and not uploaded_matches_expected_test_data(data, expected_test_data):
+        errors.append(
+            "The uploaded file is named test_data.csv, but its contents do not match the original "
+            "test_data.csv file provided with this project."
+        )
+        return None, errors, warnings
+
     return data[required_columns], errors, warnings
 
 
@@ -203,8 +313,69 @@ def render_metrics(row: pd.Series) -> None:
         column.metric(metric_name, f"{row[metric_name]:.4f}")
 
 
+def render_landing_screen() -> None:
+    st.markdown("### How to Use This Application")
+    st.markdown(
+        """
+        1. Upload the original `test_data.csv` file using the sidebar.
+        2. Navigate to **Evaluate Upload** to select an individual classifier and examine its performance.
+        3. Navigate to **Compare All Models** to compare all five classifiers side by side.
+        """
+    )
+
+    evaluate_col, compare_col = st.columns(2)
+    with evaluate_col:
+        st.markdown(
+            """
+            <div class="landing-card">
+                <h3>Evaluate Upload</h3>
+                <ul>
+                    <li>Select an individual classifier.</li>
+                    <li>View Accuracy, AUC, Precision, Recall, F1 and MCC.</li>
+                    <li>Examine the confusion matrix.</li>
+                    <li>View the classification report.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with compare_col:
+        st.markdown(
+            """
+            <div class="landing-card">
+                <h3>Compare All Models</h3>
+                <ul>
+                    <li>Compare all five classifiers using the same uploaded test dataset.</li>
+                    <li>View the evaluation metrics in a comparison table.</li>
+                    <li>Explore metric comparison charts.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        """
+        <div class="landing-callout">
+            Get started by uploading the original test_data.csv file from the sidebar.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main() -> None:
     st.title("Online Shopper Purchase Intention Classifier")
+    st.markdown(
+        '<div class="app-subtitle">Machine Learning Model Evaluation & Comparison Dashboard</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="app-description">Evaluate and compare five machine learning classification algorithms '
+        'to predict whether an online shopping session will result in a purchase.</div>',
+        unsafe_allow_html=True,
+    )
 
     if not METADATA_FILE.exists():
         st.error("Project metadata is missing. Run `py -m src.train_models` from the project root first.")
@@ -220,22 +391,32 @@ def main() -> None:
             "Choose a classifier",
             list(MODEL_DISPLAY_NAMES.values()),
         )
+        st.write("Upload the original test_data.csv file to evaluate the saved classifiers.")
         uploaded_file = st.file_uploader("Upload labeled test CSV", type=["csv"], key="sidebar_upload")
+        st.divider()
+        st.markdown(
+            """
+            - Only `test_data.csv` is accepted.
+            - The CSV must contain all required input features and the `Revenue` target column.
+            - All five models are already trained. Uploading test data will not retrain them.
+            """
+        )
         st.divider()
         st.write("Expected target column:", f"`{TARGET_COLUMN}`")
         st.write("Expected feature count:", len(FEATURE_COLUMNS))
 
     if uploaded_file is None:
-        st.info(
-            "Use the sidebar to select a classifier and upload `test_data.csv`."
-        )
+        render_landing_screen()
         reference_metrics = load_reference_metrics()
         if not reference_metrics.empty:
             st.subheader("Reference Metrics from Held-Out Test Data")
             st.dataframe(reference_metrics, use_container_width=True, hide_index=True)
         return
 
-    tab_evaluate, tab_compare = st.tabs(["Evaluate Upload", "Compare All Models"])
+    filename_error = validate_uploaded_filename(uploaded_file.name)
+    if filename_error:
+        st.error(filename_error)
+        st.stop()
 
     try:
         uploaded_data = pd.read_csv(uploaded_file)
@@ -243,7 +424,8 @@ def main() -> None:
         st.error(f"Could not read the uploaded CSV: {exc}")
         st.stop()
 
-    validated_data, errors, warnings = validate_uploaded_data(uploaded_data, metadata)
+    expected_test_data = load_expected_test_data()
+    validated_data, errors, warnings = validate_uploaded_data(uploaded_data, metadata, expected_test_data)
     for warning in warnings:
         st.warning(warning)
     if errors:
@@ -254,6 +436,8 @@ def main() -> None:
     assert validated_data is not None
     x_uploaded = validated_data[FEATURE_COLUMNS]
     y_uploaded = validated_data[TARGET_COLUMN]
+
+    tab_evaluate, tab_compare = st.tabs(["Evaluate Upload", "Compare All Models"])
 
     with tab_evaluate:
         st.subheader("Uploaded Dataset")
